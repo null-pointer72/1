@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Visualizer - Full Stereo & Expansion Edition</title>
+  
+  <!-- Three.js & OrbitControls CDNs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <style>
+    body {
+      background-color: #121212;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      gap: 15px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .playlist-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button, input[type="file"], select {
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover, select:hover {
+      background: #3a3a3a;
+    }
+
+    #track-info {
+      font-size: 0.9rem;
+      color: #888;
+      height: 20px;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 800px;
+      height: 400px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Audio Visualizer</h1>
+
+  <div class="controls">
+    <input type="file" id="file-input" accept="audio/*">
+    <button id="mic-btn">Start Microphone</button>
+
+    <div class="playlist-controls">
+      <button id="prev-btn">Prev</button>
+      <button id="demo-btn">Play Demo Melody</button>
+      <button id="next-btn">Next</button>
+    </div>
+
+    <select id="mode-select">
+      <!-- 2D MODLAR -->
+      <optgroup label="--- 2D MODLAR (İki Taraf Da Hareketli) ---">
+        <option value="mirrorWave" selected>🪩 2D Mirror Wave (Eşit Çift Taraflı)</option>
+        <option value="audioBlobSingle">🖤 2D Black Hole Blob (YENİ - Siyah & Kalın Neon Çizgi)</option>
+        <option value="bars">📊 2D Stereo Bars (Sağ-Sol Dengeli)</option>
+        <option value="circular">⭕ 2D Circular Spectrum (Tam Daire Canlı)</option>
+        <option value="radial">💥 2D Radial Burst (Çift Yönlü)</option>
+        <option value="dualVortex">🌀 2D Dual Vortex</option>
+        <option value="lightning">⚡ 2D Frequency Lightning</option>
+        <option value="matrixRain">🟢 2D Matrix Rain</option>
+        <option value="polarWeb">🌐 2D Polar Web</option>
+        <option value="dna">🧬 2D Double Helix</option>
+        <option value="stardust">✨ 2D Audio Stardust</option>
+        <option value="explosion">💥 2D Particle Explosion</option>
+        <option value="radar">🪩 2D Tunnel Radar</option>
+        <option value="wave">Oscilloscope Wave (Dalga)</option>
+      </optgroup>
+      <!-- 3D MODLAR -->
+      <optgroup label="--- 3D MODLAR ---">
+        <option value="threeThemeSphere">🔮 3D Full Theme Sphere (YENİ - Temalı Canlı Küre)</option>
+        <option value="threePeaks">📊 3D Stereo Spectrum Peaks</option>
+        <option value="threeCubes">🧊 3D Stereo Equalizer Cubes</option>
+        <option value="threeCity">🏙️ 3D Synthwave City Skyline</option>
+        <option value="threeTunnelGrid">🌌 3D Warp Tunnel Grid</option>
+        <option value="threeCrystal">🪩 3D Disco Crystal Sphere</option>
+        <option value="threeRings">🪐 3D Concentric Ring Wave</option>
+        <option value="threePlanet">🪐 3D Ringed Planet</option>
+        <option value="threeVortex">🌀 3D Vortex Wormhole</option>
+        <option value="threeGalaxy">🌌 3D Galaxy Spiral</option>
+        <option value="threeTunnel">🚀 3D Particle Tunnel</option>
+        <option value="threeSphere">🌐 3D Audio Sphere (Tel Çerçeve)</option>
+        <option value="threeGrid">🌆 3D Synthwave Grid</option>
+        <option value="threeTerrain">🌊 3D Audio Terrain</option>
+        <option value="threeStarfield">🌌 3D Warp Starfield</option>
+        <option value="threeTorus">🍩 3D Neon Torus</option>
+      </optgroup>
+    </select>
+
+    <select id="theme-select">
+      <option value="neon">🎨 Neon Tema</option>
+      <option value="cyberpunk">🌆 Cyberpunk Tema</option>
+      <option value="matrix">🟢 Matrix Tema</option>
+      <option value="sunset">🌅 Sunset Tema</option>
+      <option value="volcano">🌋 Volcano / Lava</option>
+      <option value="aurora">❄️ Aurora / Glacier</option>
+      <option value="candy">🦄 Pastel Candy</option>
+      <option value="deepspace">🌌 Deep Space</option>
+    </select>
+  </div>
+
+  <div id="track-info">Live Microphone Stream</div>
+
+  <audio id="audio" controls crossorigin="anonymous" style="display: none;"></audio>
+  
+  <div class="canvas-container">
+    <canvas id="canvas2d" width="800" height="400"></canvas>
+    <canvas id="canvas3d" width="800" height="400" style="display: none;"></canvas>
+  </div>
+
+  <script>
+    const canvas2d = document.getElementById('canvas2d');
+    const canvas3d = document.getElementById('canvas3d');
+    
+    const ctx = canvas2d.getContext('2d');
+    const audio = document.getElementById('audio');
+    const trackInfo = document.getElementById('track-info');
+    const modeSelect = document.getElementById('mode-select');
+    const themeSelect = document.getElementById('theme-select');
+    
+    const fileInput = document.getElementById('file-input');
+    const micBtn = document.getElementById('mic-btn');
+    const demoBtn = document.getElementById('demo-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    let audioCtx;
+    let analyser;
+    let source;
+    let micStream;
+    let synthInterval;
+    let currentMode = 'mirrorWave';
+    let currentTheme = 'neon';
+    let isPlaying = false;
+
+    // Three.js Değişkenleri
+    let renderer3d, scene3d, camera3d, orbitControls;
+    let sphere3d, sphereMat, sphereOriginalPositions;
+    let themeSphereMesh, themeSphereMat, themeSphereOriginalPos;
+    let gridMesh, gridMat;
+    let tunnelParticles, tunnelMat, tunnelGeometry;
+    let starfieldParticles, starfieldMat, starfieldGeometry;
+    let torusMesh, torusMat, torusOriginalPositions;
+    let terrainMesh, terrainMat;
+    let galaxyParticles, galaxyMat, galaxyGeometry;
+    let cubesGroup = [];
+    
+    let planetMesh, planetMat, planetPositions, ringMesh, ringMat;
+    let vortexParticles, vortexMat, vortexGeo;
+    let peakCubes = [], peakCapMeshes = [];
+
+    // 3D Nesneler
+    let crystalMesh, crystalMat, crystalOriginalPos;
+    let ringWavesGroup = [];
+    let cityCubes = [];
+    let tunnelGridMesh, tunnelGridMat, tunnelGridOriginalPos;
+
+    // 2D Parçacıklar & Efektler
+    let explosionParticles = [];
+    let stardustParticles = [];
+    let matrixDrops = [];
+
+    const playlist = [
+      {
+        title: "Tala'al Badru 'Alayna (Synth Theme)",
+        notes: [220, 247, 277, 293, 329, 293, 277, 247, 220]
+      },
+      {
+        title: "Ney Atmosphere (Synth Scale)",
+        notes: [146, 164, 185, 196, 220, 246, 277, 293]
+      }
+    ];
+
+    let currentTrackIndex = 0;
+
+    function getThemeHueOffset() {
+      if (currentTheme === 'cyberpunk') return 0.8;
+      if (currentTheme === 'matrix') return 0.33;
+      if (currentTheme === 'sunset') return 0.05;
+      if (currentTheme === 'volcano') return 0.02; 
+      if (currentTheme === 'aurora') return 0.52;  
+      if (currentTheme === 'candy') return 0.85;   
+      if (currentTheme === 'deepspace') return 0.68;
+      return 0.5;
+    }
+
+    function initThreeJS() {
+      if (renderer3d) return;
+
+      scene3d = new THREE.Scene();
+      camera3d = new THREE.PerspectiveCamera(60, 800 / 400, 0.1, 1000);
+
+      renderer3d = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
+      renderer3d.setSize(800, 400);
+
+      orbitControls = new THREE.OrbitControls(camera3d, renderer3d.domElement);
+      orbitControls.enableDamping = true;
+
+      // Işıklandırma (Dolu Nesneler İçin)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene3d.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7);
+      scene3d.add(dirLight);
+
+      // 1. Tel Çerçeve Küre
+      const sphereGeo = new THREE.IcosahedronGeometry(3, 4);
+      sphereOriginalPositions = sphereGeo.attributes.position.clone();
+      sphereMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+      sphere3d = new THREE.Mesh(sphereGeo, sphereMat);
+      scene3d.add(sphere3d);
+
+      // 2. YENİ: Tamamen Temalı Dolu Küre (Solid Theme Sphere)
+      const themeSphereGeo = new THREE.IcosahedronGeometry(3, 5);
+      themeSphereOriginalPos = themeSphereGeo.attributes.position.clone();
+      themeSphereMat = new THREE.MeshStandardMaterial({ 
+        color: 0x00ffff, 
+        roughness: 0.3,
+        metalness: 0.2,
+        flatShading: true 
+      });
+      themeSphereMesh = new THREE.Mesh(themeSphereGeo, themeSphereMat);
+      scene3d.add(themeSphereMesh);
+
+      // Izgara
+      const gridGeo = new THREE.PlaneGeometry(60, 60, 30, 30);
+      gridMat = new THREE.MeshBasicMaterial({ color: 0xff007f, wireframe: true });
+      gridMesh = new THREE.Mesh(gridGeo, gridMat);
+      gridMesh.rotation.x = -Math.PI / 2.5;
+      gridMesh.position.y = -5;
+      scene3d.add(gridMesh);
+
+      // Tünel
+      const particleCount = 800;
+      tunnelGeometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 2 + Math.random() * 5;
+        positions[i * 3] = Math.cos(angle) * radius;
+        positions[i * 3 + 1] = Math.sin(angle) * radius;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+      }
+      tunnelGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      tunnelMat = new THREE.PointsMaterial({ color: 0x00ff44, size: 0.18 });
+      tunnelParticles = new THREE.Points(tunnelGeometry, tunnelMat);
+      scene3d.add(tunnelParticles);
+
+      // Yıldızlar
+      const starCount = 1500;
+      starfieldGeometry = new THREE.BufferGeometry();
+      const starPositions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        starPositions[i * 3] = (Math.random() - 0.5) * 100;
+        starPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+        starPositions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+      }
+      starfieldGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+      starfieldMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 });
+      starfieldParticles = new THREE.Points(starfieldGeometry, starfieldMat);
+      scene3d.add(starfieldParticles);
+
+      // Torus
+      const torusGeo = new THREE.TorusGeometry(3, 1, 16, 50);
+      torusOriginalPositions = torusGeo.attributes.position.clone();
+      torusMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, wireframe: true });
+      torusMesh = new THREE.Mesh(torusGeo, torusMat);
+      scene3d.add(torusMesh);
+
+      // Audio Terrain
+      const terrainGeo = new THREE.PlaneGeometry(40, 40, 25, 25);
+      terrainMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
+      terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+      terrainMesh.rotation.x = -Math.PI / 3;
+      terrainMesh.position.y = -3;
+      scene3d.add(terrainMesh);
+
+      // Galaxy Spiral
+      const galaxyCount = 2000;
+      galaxyGeometry = new THREE.BufferGeometry();
+      const galaxyPos = new Float32Array(galaxyCount * 3);
+      for (let i = 0; i < galaxyCount; i++) {
+        const r = (i / galaxyCount) * 15;
+        const theta = i * 0.1;
+        galaxyPos[i * 3] = r * Math.cos(theta);
+        galaxyPos[i * 3 + 1] = (Math.random() - 0.5) * 1.5;
+        galaxyPos[i * 3 + 2] = r * Math.sin(theta);
+      }
+      galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPos, 3));
+      galaxyMat = new THREE.PointsMaterial({ color: 0x00aaff, size: 0.15 });
+      galaxyParticles = new THREE.Points(galaxyGeometry, galaxyMat);
+      scene3d.add(galaxyParticles);
+
+      // Equalizer Cubes
+      const cubeCount = 32;
+      const cubeGroupObj = new THREE.Group();
+      cubesGroup = [];
+      for (let i = 0; i < cubeCount; i++) {
+        const geo = new THREE.BoxGeometry(0.4, 1, 0.4);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff0055, wireframe: true });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.x = (i - cubeCount / 2) * 0.55;
+        cubeGroupObj.add(mesh);
+        cubesGroup.push(mesh);
+      }
+      scene3d.add(cubeGroupObj);
+
+      // Ringed Planet
+      const pGeo = new THREE.SphereGeometry(2.5, 24, 24);
+      planetPositions = pGeo.attributes.position.clone();
+      planetMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, wireframe: true });
+      planetMesh = new THREE.Mesh(pGeo, planetMat);
+      const rGeo = new THREE.RingGeometry(3.5, 5.5, 30);
+      ringMat = new THREE.MeshBasicMaterial({ color: 0xff00aa, wireframe: true, side: THREE.DoubleSide });
+      ringMesh = new THREE.Mesh(rGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2.5;
+      planetMesh.add(ringMesh);
+      scene3d.add(planetMesh);
+
+      // Vortex Wormhole
+      const vortexCount = 1200;
+      vortexGeo = new THREE.BufferGeometry();
+      const vPos = new Float32Array(vortexCount * 3);
+      for(let i=0; i<vortexCount; i++) {
+        const angle = i * 0.1;
+        const radius = 0.5 + (i / vortexCount) * 8;
+        vPos[i*3] = Math.cos(angle) * radius;
+        vPos[i*3+1] = Math.sin(angle) * radius;
+        vPos[i*3+2] = -(i / vortexCount) * 40;
+      }
+      vortexGeo.setAttribute('position', new THREE.BufferAttribute(vPos, 3));
+      vortexMat = new THREE.PointsMaterial({ color: 0xff00ff, size: 0.18 });
+      vortexParticles = new THREE.Points(vortexGeo, vortexMat);
+      scene3d.add(vortexParticles);
+
+      // Spectrum Peaks
+      const peakGroup = new THREE.Group();
+      peakCubes = [];
+      peakCapMeshes = [];
+      for(let i=0; i<32; i++) {
+        const pBar = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1, 0.35), new THREE.MeshBasicMaterial({color: 0x00ffff, wireframe: true}));
+        const pCap = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), new THREE.MeshBasicMaterial({color: 0xffffff}));
+        pBar.position.x = (i - 16) * 0.45;
+        pCap.position.x = pBar.position.x;
+        peakGroup.add(pBar);
+        peakGroup.add(pCap);
+        peakCubes.push(pBar);
+        peakCapMeshes.push(pCap);
+      }
+      scene3d.add(peakGroup);
+
+      // Crystal Sphere
+      const cGeo = new THREE.DodecahedronGeometry(3, 1);
+      crystalOriginalPos = cGeo.attributes.position.clone();
+      crystalMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+      crystalMesh = new THREE.Mesh(cGeo, crystalMat);
+      scene3d.add(crystalMesh);
+
+      // Ring Waves
+      const ringGroup = new THREE.Group();
+      ringWavesGroup = [];
+      for(let i=0; i<8; i++) {
+        const rGeo = new THREE.TorusGeometry(1 + i * 1.2, 0.08, 16, 40);
+        const rMat = new THREE.MeshBasicMaterial({ color: 0xff00aa, wireframe: true });
+        const rMesh = new THREE.Mesh(rGeo, rMat);
+        ringGroup.add(rMesh);
+        ringWavesGroup.push(rMesh);
+      }
+      scene3d.add(ringGroup);
+
+      // City Skyline
+      const cityGroup = new THREE.Group();
+      cityCubes = [];
+      for(let x = -8; x <= 8; x += 1.5) {
+        for(let z = -8; z <= 8; z += 1.5) {
+          const bGeo = new THREE.BoxGeometry(1, 1, 1);
+          const bMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, wireframe: true });
+          const bMesh = new THREE.Mesh(bGeo, bMat);
+          bMesh.position.set(x, 0, z);
+          cityGroup.add(bMesh);
+          cityCubes.push(bMesh);
+        }
+      }
+      scene3d.add(cityGroup);
+
+      // Warp Tunnel Grid
+      const tGridGeo = new THREE.CylinderGeometry(5, 5, 40, 24, 40, true);
+      tunnelGridOriginalPos = tGridGeo.attributes.position.clone();
+      tunnelGridMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, side: THREE.DoubleSide });
+      tunnelGridMesh = new THREE.Mesh(tGridGeo, tunnelGridMat);
+      tunnelGridMesh.rotation.x = Math.PI / 2;
+      scene3d.add(tunnelGridMesh);
+
+      // 2D Stardust, Explosion & Matrix Init
+      for(let i=0; i<100; i++) {
+        stardustParticles.push({
+          x: Math.random() * 800, y: Math.random() * 400,
+          vy: Math.random() * 2 + 1, size: Math.random() * 3 + 1
+        });
+      }
+      for (let i = 0; i < 80; i++) {
+        explosionParticles.push({
+          x: 400, y: 200,
+          vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+          size: Math.random() * 4 + 2
+        });
+      }
+
+      const columns = Math.floor(800 / 20);
+      for(let i=0; i<columns; i++) {
+        matrixDrops[i] = Math.floor(Math.random() * -20);
+      }
+
+      update3dVisibility();
+    }
+
+    function update3dVisibility() {
+      if (!scene3d) return;
+      sphere3d.visible = (currentMode === 'threeSphere');
+      themeSphereMesh.visible = (currentMode === 'threeThemeSphere');
+      gridMesh.visible = (currentMode === 'threeGrid');
+      tunnelParticles.visible = (currentMode === 'threeTunnel');
+      starfieldParticles.visible = (currentMode === 'threeStarfield');
+      torusMesh.visible = (currentMode === 'threeTorus');
+      terrainMesh.visible = (currentMode === 'threeTerrain');
+      galaxyParticles.visible = (currentMode === 'threeGalaxy');
+      cubesGroup.forEach(c => c.visible = (currentMode === 'threeCubes'));
+      planetMesh.visible = (currentMode === 'threePlanet');
+      vortexParticles.visible = (currentMode === 'threeVortex');
+      peakCubes.forEach(c => c.visible = (currentMode === 'threePeaks'));
+      peakCapMeshes.forEach(c => c.visible = (currentMode === 'threePeaks'));
+      
+      crystalMesh.visible = (currentMode === 'threeCrystal');
+      ringWavesGroup.forEach(r => r.visible = (currentMode === 'threeRings'));
+      cityCubes.forEach(b => b.visible = (currentMode === 'threeCity'));
+      tunnelGridMesh.visible = (currentMode === 'threeTunnelGrid');
+
+      if (currentMode === 'threeSphere' || currentMode === 'threePlanet' || currentMode === 'threeCrystal' || currentMode === 'threeThemeSphere') {
+        camera3d.position.set(0, 0, 12);
+      } else if (currentMode === 'threeVortex' || currentMode === 'threeTunnelGrid') {
+        camera3d.position.set(0, 0, 5);
+      } else if (currentMode === 'threePeaks' || currentMode === 'threeCubes') {
+        camera3d.position.set(0, 4, 15);
+      } else if (currentMode === 'threeCity') {
+        camera3d.position.set(12, 12, 15);
+      } else if (currentMode === 'threeRings') {
+        camera3d.position.set(0, 8, 16);
+      } else if (currentMode === 'threeGrid') {
+        camera3d.position.set(0, 2, 18);
+      } else if (currentMode === 'threeTunnel' || currentMode === 'threeStarfield' || currentMode === 'threeTorus') {
+        camera3d.position.set(0, 0, 15);
+      } else if (currentMode === 'threeTerrain') {
+        camera3d.position.set(0, 5, 22);
+      } else if (currentMode === 'threeGalaxy') {
+        camera3d.position.set(0, 12, 18);
+      }
+      orbitControls.target.set(0, 0, 0);
+      orbitControls.update();
+    }
+
+    function switchCanvasVisibility() {
+      if (currentMode.startsWith('three')) {
+        canvas3d.style.display = 'block';
+        canvas2d.style.display = 'none';
+      } else {
+        canvas3d.style.display = 'none';
+        canvas2d.style.display = 'block';
+      }
+    }
+
+    modeSelect.addEventListener('change', (e) => {
+      currentMode = e.target.value;
+      setupAudioContext();
+      switchCanvasVisibility();
+
+      if (currentMode.startsWith('three')) {
+        initThreeJS();
+        update3dVisibility();
+      }
+    });
+
+    themeSelect.addEventListener('change', (e) => {
+      currentTheme = e.target.value;
+    });
+
+    function setupAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function resetSources() {
+      setupAudioContext();
+      if (synthInterval) clearInterval(synthInterval);
+      if (source) source.disconnect();
+      if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+      }
+      audio.pause();
+      isPlaying = false;
+    }
+
+    audio.addEventListener('pause', () => { isPlaying = false; });
+    audio.addEventListener('play', () => { isPlaying = true; });
+
+    function connectSourceToAnalyser(sourceNode) {
+      sourceNode.connect(analyser);
+    }
+
+    function playSynthMelody(index) {
+      resetSources();
+      currentTrackIndex = index;
+      const track = playlist[currentTrackIndex];
+      trackInfo.textContent = `Playing Synth: ${track.title}`;
+      isPlaying = true;
+
+      let noteIndex = 0;
+      synthInterval = setInterval(() => {
+        if (!isPlaying) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(track.notes[noteIndex], audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        osc.connect(gain);
+        connectSourceToAnalyser(gain);
+        analyser.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+        noteIndex = (noteIndex + 1) % track.notes.length;
+      }, 500);
+    }
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      resetSources();
+      audio.style.display = 'block';
+      trackInfo.textContent = `Playing File: ${file.name}`;
+      audio.src = URL.createObjectURL(file);
+      source = audioCtx.createMediaElementSource(audio);
+      connectSourceToAnalyser(source);
+      analyser.connect(audioCtx.destination);
+      audio.play();
+      isPlaying = true;
+    });
+
+    micBtn.addEventListener('click', async () => {
+      try {
+        resetSources();
+        audio.style.display = 'none';
+        trackInfo.textContent = "Live Microphone Stream";
+        isPlaying = true;
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        source = audioCtx.createMediaStreamSource(micStream);
+        connectSourceToAnalyser(source);
+      } catch (err) {
+        alert('Microphone access denied!');
+      }
+    });
+
+    demoBtn.addEventListener('click', () => playSynthMelody(currentTrackIndex));
+    nextBtn.addEventListener('click', () => playSynthMelody((currentTrackIndex + 1) % playlist.length));
+    prevBtn.addEventListener('click', () => playSynthMelody((currentTrackIndex - 1 + playlist.length) % playlist.length));
+
+    // MAIN RENDER LOOP
+    function render() {
+      const hueOffset = getThemeHueOffset();
+
+      if (currentMode.startsWith('three')) {
+        if (renderer3d) {
+          orbitControls.update();
+          const dataArray = new Uint8Array(analyser ? analyser.frequencyBinCount : 0);
+          if (analyser && isPlaying) analyser.getByteFrequencyData(dataArray);
+
+          let totalSum = dataArray.reduce((a, b) => a + b, 0);
+          const totalAvg = dataArray.length ? totalSum / dataArray.length : 0;
+
+          // 1. YENİ 3D: TAMAMEN TEMALI DOLU KÜRE (Theme Sphere)
+          if (currentMode === 'threeThemeSphere') {
+            themeSphereMesh.rotation.x += 0.005;
+            themeSphereMesh.rotation.y += 0.008;
+            const pos = themeSphereMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = themeSphereOriginalPos.getX(i);
+              const oy = themeSphereOriginalPos.getY(i);
+              const oz = themeSphereOriginalPos.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.45), oy * (1 + val * 0.45), oz * (1 + val * 0.45));
+            }
+            pos.needsUpdate = true;
+            themeSphereMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.3, 1.0, 0.5);
+
+          } else if (currentMode === 'threeTunnelGrid') {
+            tunnelGridMesh.rotation.z += 0.005 + (totalAvg / 255) * 0.02;
+            const pos = tunnelGridMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = tunnelGridOriginalPos.getX(i);
+              const oy = tunnelGridOriginalPos.getY(i);
+              const oz = tunnelGridOriginalPos.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.3), oy * (1 + val * 0.3), oz);
+            }
+            pos.needsUpdate = true;
+            tunnelGridMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.4, 1.0, 0.5);
+
+          } else if (currentMode === 'threePeaks') {
+            const count = peakCubes.length;
+            for(let i=0; i<count; i++) {
+              const distFromCenter = Math.abs(i - count / 2) / (count / 2);
+              const freqIndex = Math.floor(distFromCenter * (dataArray.length / 3));
+              const val = (dataArray[freqIndex] || 0) / 255;
+              const targetH = 1 + val * 8;
+              
+              peakCubes[i].scale.y = targetH;
+              if (peakCapMeshes[i].position.y < targetH / 2) {
+                peakCapMeshes[i].position.y = targetH / 2;
+              } else {
+                peakCapMeshes[i].position.y -= 0.05;
+              }
+              peakCubes[i].material.color.setHSL(hueOffset + val * 0.3, 1.0, 0.5);
+            }
+
+          } else if (currentMode === 'threeCubes') {
+            const count = cubesGroup.length;
+            for (let i = 0; i < count; i++) {
+              const distFromCenter = Math.abs(i - count / 2) / (count / 2);
+              const freqIndex = Math.floor(distFromCenter * (dataArray.length / 3));
+              const val = (dataArray[freqIndex] || 0) / 255;
+
+              cubesGroup[i].scale.y = 1 + val * 10;
+              cubesGroup[i].material.color.setHSL(hueOffset + val * 0.4, 1.0, 0.5);
+            }
+
+          } else if (currentMode === 'threeCrystal') {
+            crystalMesh.rotation.x += 0.01;
+            crystalMesh.rotation.y += 0.01;
+            const pos = crystalMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = crystalOriginalPos.getX(i);
+              const oy = crystalOriginalPos.getY(i);
+              const oz = crystalOriginalPos.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.5), oy * (1 + val * 0.5), oz * (1 + val * 0.5));
+            }
+            pos.needsUpdate = true;
+            crystalMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.4, 1.0, 0.5);
+
+          } else if (currentMode === 'threeRings') {
+            ringWavesGroup.forEach((r, idx) => {
+              const val = (dataArray[idx * 8] || 0) / 255;
+              r.rotation.x = Math.PI / 3;
+              r.scale.setScalar(1 + val * 0.8);
+              r.material.color.setHSL(hueOffset + (idx * 0.05), 1.0, 0.5);
+            });
+
+          } else if (currentMode === 'threeCity') {
+            cityCubes.forEach((b, idx) => {
+              const val = (dataArray[idx % (dataArray.length / 2)] || 0) / 255;
+              b.scale.y = 1 + val * 6;
+              b.position.y = b.scale.y / 2;
+              b.material.color.setHSL(hueOffset + val * 0.3, 1.0, 0.5);
+            });
+
+          } else if (currentMode === 'threePlanet') {
+            planetMesh.rotation.y += 0.005;
+            ringMesh.rotation.z += 0.01;
+            const pos = planetMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = planetPositions.getX(i);
+              const oy = planetPositions.getY(i);
+              const oz = planetPositions.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.25), oy * (1 + val * 0.25), oz * (1 + val * 0.25));
+            }
+            pos.needsUpdate = true;
+            planetMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.3, 1.0, 0.5);
+
+          } else if (currentMode === 'threeVortex') {
+            vortexParticles.rotation.z += 0.01 + (totalAvg / 255) * 0.03;
+            vortexMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.4, 1.0, 0.5);
+
+          } else if (currentMode === 'threeSphere') {
+            sphere3d.rotation.x += 0.005;
+            sphere3d.rotation.y += 0.005;
+            const pos = sphere3d.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = sphereOriginalPositions.getX(i);
+              const oy = sphereOriginalPositions.getY(i);
+              const oz = sphereOriginalPositions.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.4), oy * (1 + val * 0.4), oz * (1 + val * 0.4));
+            }
+            pos.needsUpdate = true;
+            sphereMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.3, 1.0, 0.5);
+
+          } else if (currentMode === 'threeGalaxy') {
+            galaxyParticles.rotation.y += 0.002 + (totalAvg / 255) * 0.01;
+            galaxyMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.3, 1.0, 0.5);
+
+          } else if (currentMode === 'threeGrid') {
+            gridMesh.position.z += 0.1;
+            if (gridMesh.position.z > 2) gridMesh.position.z = 0;
+            const pos = gridMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              pos.setZ(i, val * 3);
+            }
+            pos.needsUpdate = true;
+            gridMat.color.setHSL(hueOffset - (totalAvg / 255) * 0.25, 1.0, 0.5);
+
+          } else if (currentMode === 'threeTunnel') {
+            const speed = 0.2 + (totalAvg / 255) * 0.8;
+            const pos = tunnelGeometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              let z = pos.getZ(i) + speed;
+              if (z > 25) z = -25;
+              pos.setZ(i, z);
+            }
+            pos.needsUpdate = true;
+            tunnelMat.color.setHSL(hueOffset, 1.0, 0.5);
+
+          } else if (currentMode === 'threeStarfield') {
+            const speed = 0.5 + (totalAvg / 255) * 1.5;
+            const pos = starfieldGeometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              let z = pos.getZ(i) + speed;
+              if (z > 50) z = -50;
+              pos.setZ(i, z);
+            }
+            pos.needsUpdate = true;
+            starfieldMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.2, 1.0, 0.6);
+
+          } else if (currentMode === 'threeTorus') {
+            torusMesh.rotation.x += 0.01;
+            torusMesh.rotation.y += 0.01;
+            const pos = torusMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              const ox = torusOriginalPositions.getX(i);
+              const oy = torusOriginalPositions.getY(i);
+              const oz = torusOriginalPositions.getZ(i);
+              pos.setXYZ(i, ox * (1 + val * 0.2), oy * (1 + val * 0.2), oz * (1 + val * 0.2));
+            }
+            pos.needsUpdate = true;
+            torusMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.4, 1.0, 0.5);
+
+          } else if (currentMode === 'threeTerrain') {
+            terrainMesh.position.z += 0.05;
+            if (terrainMesh.position.z > 2) terrainMesh.position.z = 0;
+            const pos = terrainMesh.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              const val = (dataArray[i % dataArray.length] || 0) / 255;
+              pos.setZ(i, val * 4);
+            }
+            pos.needsUpdate = true;
+            terrainMat.color.setHSL(hueOffset + (totalAvg / 255) * 0.3, 1.0, 0.5);
+          }
+
+          renderer3d.render(scene3d, camera3d);
+        }
+      } else {
+        ctx.clearRect(0, 0, canvas2d.width, canvas2d.height);
+
+        if (analyser && isPlaying) {
+          const bufferLength = analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+
+          if (currentMode === 'mirrorWave') {
+            analyser.getByteFrequencyData(dataArray);
+            drawMirrorWave(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'audioBlobSingle') {
+            analyser.getByteFrequencyData(dataArray);
+            drawSingleAudioBlob(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'bars') {
+            analyser.getByteFrequencyData(dataArray);
+            drawLinearBars(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'circular') {
+            analyser.getByteFrequencyData(dataArray);
+            drawCircular(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'radial') {
+            analyser.getByteFrequencyData(dataArray);
+            drawRadialSpectrum(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'dualVortex') {
+            analyser.getByteFrequencyData(dataArray);
+            drawDualVortex(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'lightning') {
+            analyser.getByteFrequencyData(dataArray);
+            drawLightning(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'matrixRain') {
+            analyser.getByteFrequencyData(dataArray);
+            drawMatrixRain(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'polarWeb') {
+            analyser.getByteFrequencyData(dataArray);
+            drawPolarWeb(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'dna') {
+            analyser.getByteFrequencyData(dataArray);
+            drawDNA(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'stardust') {
+            analyser.getByteFrequencyData(dataArray);
+            drawStardust(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'explosion') {
+            analyser.getByteFrequencyData(dataArray);
+            drawExplosion(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'radar') {
+            analyser.getByteFrequencyData(dataArray);
+            drawRadar(dataArray, bufferLength, hueOffset);
+          } else if (currentMode === 'wave') {
+            analyser.getByteTimeDomainData(dataArray);
+            drawWave(dataArray, bufferLength, hueOffset);
+          }
+        }
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    window.onload = () => {
+      initThreeJS();
+      render();
+    };
+
+    // --- 2D ÇİZİM FONKSİYONLARI ---
+
+    // YENİ 2D: TEK SİYAH DAMLA VE KALIN NEON ÇERÇEVE
+    function drawSingleAudioBlob(dataArray, bufferLength, hueOffset) {
+      const centerX = canvas2d.width / 2;
+      const centerY = canvas2d.height / 2;
+      const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+      
+      const radius = 60 + (avg / 255) * 80;
+      const strokeThickness = 6 + (avg / 255) * 14; 
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      
+      // İçi Koyu Siyah
+      ctx.fillStyle = '#050505';
+      ctx.fill();
+
+      // Kalın Parlak Neon Çerçeve Çizgisi
+      ctx.lineWidth = strokeThickness;
+      ctx.strokeStyle = `hsl(${hueOffset * 360}, 100%, 50%)`;
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = `hsl(${hueOffset * 360}, 100%, 50%)`;
+      ctx.stroke();
+      ctx.shadowBlur = 0; // Gölgeyi sıfırla
+    }
+
+    function drawMirrorWave(dataArray, bufferLength, hueOffset) {
+      const centerY = canvas2d.height / 2;
+      const centerX = canvas2d.width / 2;
+      const barCount = 40;
+      const barWidth = centerX / barCount;
+
+      for (let i = 0; i < barCount; i++) {
+        const index = Math.floor((i / barCount) * (bufferLength / 2));
+        const val = dataArray[index] || 0;
+        const h = (val / 255) * (canvas2d.height / 2.2);
+
+        ctx.fillStyle = `hsl(${(hueOffset * 360) + (i * 4)}, 100%, 50%)`;
+        ctx.fillRect(centerX + (i * barWidth), centerY - h, barWidth - 2, h * 2);
+        ctx.fillRect(centerX - ((i + 1) * barWidth), centerY - h, barWidth - 2, h * 2);
+      }
+    }
+
+    function drawLinearBars(dataArray, bufferLength, hueOffset) {
+      const barCount = 60;
+      const barWidth = canvas2d.width / barCount;
+
+      for (let i = 0; i < barCount; i++) {
+        const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
+        const freqIndex = Math.floor(distFromCenter * (bufferLength / 3));
+        const val = dataArray[freqIndex] || 0;
+        const barHeight = (val / 255) * canvas2d.height * 0.85;
+
+        ctx.fillStyle = `hsl(${(hueOffset * 360) + (i * 3)}, 100%, 50%)`;
+        ctx.fillRect(i * barWidth, canvas2d.height - barHeight, barWidth - 2, barHeight);
+      }
+    }
+
+    function drawMatrixRain(dataArray, bufferLength, hueOffset) {
+      let avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, canvas2d.width, canvas2d.height);
+
+      ctx.fillStyle = `hsl(${hueOffset * 360}, 100%, 50%)`;
+      ctx.font = '15px monospace';
+
+      const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*';
+
+      matrixDrops.forEach((y, i) => {
+        const char = characters[Math.floor(Math.random() * characters.length)];
+        const x = i * 20;
+        ctx.fillText(char, x, y);
+
+        if (y > canvas2d.height && Math.random() > 0.975) {
+          matrixDrops[i] = 0;
+        }
+        matrixDrops[i] += 15 + (avg / 20);
+      });
+    }
+
+    function drawDualVortex(dataArray, bufferLength, hueOffset) {
+      const centerY = canvas2d.height / 2;
+      const leftX = canvas2d.width * 0.25;
+      const rightX = canvas2d.width * 0.75;
+      const points = 36;
+
+      [leftX, rightX].forEach((centerX) => {
+        for(let i=0; i<points; i++) {
+          const val = dataArray[i * 2] || 0;
+          const r = 20 + (val / 255) * 80;
+          const angle = (i / points) * Math.PI * 2;
+          const x = centerX + Math.cos(angle) * r;
+          const y = centerY + Math.sin(angle) * r;
+
+          ctx.strokeStyle = `hsl(${(hueOffset * 360) + (i * 10)}, 100%, 50%)`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function drawLightning(dataArray, bufferLength, hueOffset) {
+      const centerY = canvas2d.height / 2;
+      const centerX = canvas2d.width / 2;
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = `hsl(${hueOffset * 360}, 100%, 60%)`;
+      ctx.beginPath();
+      
+      ctx.moveTo(centerX, centerY);
+      for(let x = centerX; x < canvas2d.width; x += 20) {
+        const idx = Math.floor(((x - centerX) / centerX) * (bufferLength / 2));
+        const val = (dataArray[idx] || 0) / 255;
+        const offset = (Math.random() - 0.5) * val * 80;
+        ctx.lineTo(x, centerY + offset);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      for(let x = centerX; x > 0; x -= 20) {
+        const idx = Math.floor(((centerX - x) / centerX) * (bufferLength / 2));
+        const val = (dataArray[idx] || 0) / 255;
+        const offset = (Math.random() - 0.5) * val * 80;
+        ctx.lineTo(x, centerY + offset);
+      }
+      ctx.stroke();
+    }
+
+    function drawCircular(dataArray, bufferLength, hueOffset) {
+      const centerX = canvas2d.width / 2;
+      const centerY = canvas2d.height / 2;
+      const radius = 70;
+      const totalBars = 64;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = `hsl(${hueOffset * 360}, 100%, 60%)`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      for (let i = 0; i < totalBars; i++) {
+        const simIndex = i < totalBars / 2 ? i : totalBars - i;
+        const val = dataArray[simIndex * 2] || 0;
+        const barHeight = (val / 255) * 80;
+        const angle = (i / totalBars) * Math.PI * 2;
+
+        const xStart = centerX + Math.cos(angle) * radius;
+        const yStart = centerY + Math.sin(angle) * radius;
+        const xEnd = centerX + Math.cos(angle) * (radius + barHeight);
+        const yEnd = centerY + Math.sin(angle) * (radius + barHeight);
+
+        ctx.strokeStyle = `hsl(${(hueOffset * 360) + (simIndex * 5)}, 100%, 50%)`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(xStart, yStart);
+        ctx.lineTo(xEnd, yEnd);
+        ctx.stroke();
+      }
+    }
+
+    function drawRadialSpectrum(dataArray, bufferLength, hueOffset) {
+      const centerX = canvas2d.width / 2;
+      const centerY = canvas2d.height / 2;
+      const totalLines = 80;
+
+      for (let i = 0; i < totalLines; i++) {
+        const angle = (i / totalLines) * Math.PI * 2;
+        const simIndex = i < totalLines / 2 ? i : totalLines - i;
+        const val = dataArray[simIndex * 2] || 0;
+        const len = (val / 255) * 160;
+
+        const x = centerX + Math.cos(angle) * len;
+        const y = centerY + Math.sin(angle) * len;
+
+        ctx.strokeStyle = `hsl(${(hueOffset * 360) + (simIndex * 4)}, 100%, 50%)`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawPolarWeb(dataArray, bufferLength, hueOffset) {
+      const centerX = canvas2d.width / 2;
+      const centerY = canvas2d.height / 2;
+      const points = 60;
+
+      ctx.beginPath();
+      for (let i = 0; i < points; i++) {
+        const angle = (i / points) * Math.PI * 2;
+        const simIndex = i < points / 2 ? i : points - i;
+        const val = dataArray[simIndex * 2] || 0;
+        const radius = 40 + (val * 0.7);
+
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `hsl(${hueOffset * 360}, 100%, 50%)`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawDNA(dataArray, bufferLength, hueOffset) {
+      const centerY = canvas2d.height / 2;
+      for (let x = 0; x < canvas2d.width; x += 15) {
+        const distFromCenter = Math.abs(x - canvas2d.width / 2) / (canvas2d.width / 2);
+        const freqIndex = Math.floor((1 - distFromCenter) * (bufferLength / 4));
+        const val = ((dataArray[freqIndex] || 0) / 255) * 80;
+
+        const y1 = centerY + Math.sin(x * 0.03) * (val + 20);
+        const y2 = centerY - Math.sin(x * 0.03) * (val + 20);
+
+        ctx.beginPath();
+        ctx.arc(x, y1, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${hueOffset * 360}, 100%, 50%)`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y2, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${(hueOffset * 360) + 120}, 100%, 50%)`;
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(x, y1);
+        ctx.lineTo(x, y2);
+        ctx.stroke();
+      }
+    }
+
+    function drawStardust(dataArray, bufferLength, hueOffset) {
+      let avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+      stardustParticles.forEach((p, idx) => {
+        p.y -= p.vy * (1 + avg / 30);
+        if (p.y < 0) {
+          p.y = 400;
+          p.x = Math.random() * 800;
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size + (avg / 40), 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${(hueOffset * 360) + (idx * 3)}, 100%, 70%)`;
+        ctx.fill();
+      });
+    }
+
+    function drawExplosion(dataArray, bufferLength, hueOffset) {
+      let avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+
+      explosionParticles.forEach((p, idx) => {
+        p.x += p.vx * (1 + avg / 40);
+        p.y += p.vy * (1 + avg / 40);
+        
+        if (p.x < 0 || p.x > 800 || p.y < 0 || p.y > 400) {
+          p.x = 400; p.y = 200;
+          p.vx = (Math.random() - 0.5) * 8;
+          p.vy = (Math.random() - 0.5) * 8;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size + (avg / 25), 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${(hueOffset * 360) + (idx * 5)}, 100%, 50%)`;
+        ctx.fill();
+      });
+    }
+
+    function drawRadar(dataArray, bufferLength, hueOffset) {
+      const centerX = canvas2d.width / 2;
+      const centerY = canvas2d.height / 2;
+
+      for (let i = 0; i < 20; i++) {
+        const val = dataArray[i * 4] || 0;
+        const radius = (i * 18) + (val * 0.4);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsl(${(hueOffset * 360) + (i * 8)}, 100%, 50%)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    function drawWave(dataArray, bufferLength, hueOffset) {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = `hsl(${hueOffset * 360}, 100%, 50%)`;
+      ctx.beginPath();
+
+      const sliceWidth = canvas2d.width / bufferLength;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * canvas2d.height) / 2;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+
+        x += sliceWidth;
+      }
+
+      ctx.lineTo(canvas2d.width, canvas2d.height / 2);
+      ctx.stroke();
+    }
+  </script>
+</body>
+</html>
